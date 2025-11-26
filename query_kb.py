@@ -158,32 +158,60 @@ while True:
                 print("-" * 80)
                 
                 # Display knowledge source type
-                if hasattr(ref, 'type'):
-                    print(f"Source Type: {ref.type}")
+                source_type = getattr(ref, 'type', 'unknown')
+                print(f"Source Type: {source_type}")
                 
-                # Display document title from additional_properties
-                if hasattr(ref, 'additional_properties') and isinstance(ref.additional_properties, dict):
-                    title = ref.additional_properties.get('title', 'Unknown')
-                    print(f"Document: {title}")
+                # Handle web sources differently from search index sources
+                if source_type == 'web':
+                    # Web source - get URL and snippet from source_data
+                    if hasattr(ref, 'source_data') and ref.source_data:
+                        if isinstance(ref.source_data, dict):
+                            url = ref.source_data.get('url', 'Unknown URL')
+                            title = ref.source_data.get('name', 'Web Source')
+                            snippet = ref.source_data.get('snippet', '')
+                            
+                            print(f"Title: {title}")
+                            print(f"URL: {url}")
+                            
+                            if snippet:
+                                print(f"\nCitation Text:")
+                                print("-" * 80)
+                                print(snippet)
+                            else:
+                                print("\nNo snippet available for this web source.")
+                    else:
+                        print("No source data available for this web reference.")
                 
-                # Display reranker score if available
-                if hasattr(ref, 'reranker_score'):
-                    print(f"Relevance Score: {ref.reranker_score:.4f}")
+                elif source_type == 'searchIndex':
+                    # Search index source - get document and content
+                    if hasattr(ref, 'additional_properties') and isinstance(ref.additional_properties, dict):
+                        title = ref.additional_properties.get('title', 'Unknown')
+                        print(f"Document: {title}")
+                    
+                    # Display reranker score if available (only for search indexes)
+                    if hasattr(ref, 'reranker_score') and ref.reranker_score is not None:
+                        print(f"Relevance Score: {ref.reranker_score:.4f}")
+                    
+                    # Extract and display content from source_data
+                    if hasattr(ref, 'source_data') and ref.source_data:
+                        if isinstance(ref.source_data, dict):
+                            content = ref.source_data.get('content')
+                            if content:
+                                print(f"\nCitation Text:")
+                                print("-" * 80)
+                                # Clean up the content formatting
+                                content_text = content.replace('\r\n', '\n').replace('\t', '  ')
+                                print(content_text)
+                            else:
+                                print("\nNo content available for this reference.")
+                    else:
+                        print("\nNo source data available for this reference.")
                 
-                # Extract and display content from source_data
-                if hasattr(ref, 'source_data') and ref.source_data:
-                    if isinstance(ref.source_data, dict):
-                        content = ref.source_data.get('content')
-                        if content:
-                            print(f"\nCitation Text:")
-                            print("-" * 80)
-                            # Clean up the content formatting
-                            content_text = content.replace('\r\n', '\n').replace('\t', '  ')
-                            print(content_text)
-                        else:
-                            print("\nNo content available for this reference.")
                 else:
-                    print("\nNo source data available for this reference.")
+                    # Unknown source type - display whatever is available
+                    print(f"Unknown source type: {source_type}")
+                    if hasattr(ref, 'source_data') and ref.source_data:
+                        print(f"Source Data: {ref.source_data}")
             
             print("\n" + "=" * 80)
         
