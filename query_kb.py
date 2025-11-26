@@ -135,18 +135,57 @@ while True:
         result = kb_client.retrieve(request)
         
         # Display response
-        print("\n" + "-" * 80)
-        print("Answer:")
-        print("-" * 80)
+        print("\n" + "=" * 80)
+        print("ANSWER")
+        print("=" * 80)
         if result.response and len(result.response) > 0:
             for response_item in result.response:
                 if response_item.content:
                     for content_item in response_item.content:
                         if hasattr(content_item, 'text'):
                             print(content_item.text)
+                            print()
         else:
             print("No answer found.")
-        print("-" * 80)
+        
+        # Display references/citations if available
+        if hasattr(result, 'references') and result.references:
+            print("\n" + "=" * 80)
+            print("CITATIONS")
+            print("=" * 80)
+            for idx, ref in enumerate(result.references):
+                print(f"\n[ref_id:{idx}]")
+                print("-" * 80)
+                
+                # Display knowledge source type
+                if hasattr(ref, 'type'):
+                    print(f"Source Type: {ref.type}")
+                
+                # Display document title from additional_properties
+                if hasattr(ref, 'additional_properties') and isinstance(ref.additional_properties, dict):
+                    title = ref.additional_properties.get('title', 'Unknown')
+                    print(f"Document: {title}")
+                
+                # Display reranker score if available
+                if hasattr(ref, 'reranker_score'):
+                    print(f"Relevance Score: {ref.reranker_score:.4f}")
+                
+                # Extract and display content from source_data
+                if hasattr(ref, 'source_data') and ref.source_data:
+                    if isinstance(ref.source_data, dict):
+                        content = ref.source_data.get('content')
+                        if content:
+                            print(f"\nCitation Text:")
+                            print("-" * 80)
+                            # Clean up the content formatting
+                            content_text = content.replace('\r\n', '\n').replace('\t', '  ')
+                            print(content_text)
+                        else:
+                            print("\nNo content available for this reference.")
+                else:
+                    print("\nNo source data available for this reference.")
+            
+            print("\n" + "=" * 80)
         
     except Exception as e:
         print(f"\nError: {str(e)}")
