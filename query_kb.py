@@ -42,6 +42,7 @@ Example Queries:
 """
 
 import os
+import time
 from dotenv import load_dotenv
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.knowledgebases import KnowledgeBaseRetrievalClient
@@ -99,7 +100,11 @@ while True:
         continue
     
     try:
-        # Create retrieval request
+        # Start total timing
+        total_start_time = time.time()
+        
+        # Time: Request preparation
+        request_prep_start = time.time()
         request = KnowledgeBaseRetrievalRequest(
             messages=[
                 KnowledgeBaseMessage(
@@ -129,11 +134,16 @@ while True:
             ],
             include_activity=True
         )
+        request_prep_time = time.time() - request_prep_start
         
-        # Send request to knowledge base
+        # Time: Knowledge base retrieval (includes query planning, search, and answer synthesis)
         print("\nSearching knowledge base...")
+        retrieval_start = time.time()
         result = kb_client.retrieve(request)
+        retrieval_time = time.time() - retrieval_start
         
+        # Time: Response processing
+        response_processing_start = time.time()
         # Display response
         print("\n" + "=" * 80)
         print("ANSWER")
@@ -163,24 +173,17 @@ while True:
                 
                 # Handle web sources differently from search index sources
                 if source_type == 'web':
-                    # Web source - get URL and snippet from source_data
+                    # Web Knowledge Source references don't return extractive snippets (only formulated answers)
                     if hasattr(ref, 'source_data') and ref.source_data:
                         if isinstance(ref.source_data, dict):
                             url = ref.source_data.get('url', 'Unknown URL')
                             title = ref.source_data.get('name', 'Web Source')
-                            snippet = ref.source_data.get('snippet', '')
                             
                             print(f"Title: {title}")
                             print(f"URL: {url}")
-                            
-                            if snippet:
-                                print(f"\nCitation Text:")
-                                print("-" * 80)
-                                print(snippet)
-                            else:
-                                print("\nNo snippet available for this web source.")
+                            print("\nCitation text is unavailable for Web Knowledge Source references.")
                     else:
-                        print("No source data available for this web reference.")
+                        print("Web Knowledge Source references omit citation snippets by design.")
                 
                 elif source_type == 'searchIndex':
                     # Search index source - get document and content
@@ -214,6 +217,21 @@ while True:
                         print(f"Source Data: {ref.source_data}")
             
             print("\n" + "=" * 80)
+        
+        response_processing_time = time.time() - response_processing_start
+        total_time = time.time() - total_start_time
+        
+        # Display timing information
+        print("\n" + "=" * 80)
+        print("PERFORMANCE METRICS")
+        print("=" * 80)
+        print(f"Total Query Time:           {total_time:.3f} seconds")
+        print(f"  ├─ Request Preparation:   {request_prep_time:.3f} seconds ({request_prep_time/total_time*100:.1f}%)")
+        print(f"  ├─ KB Retrieval*:         {retrieval_time:.3f} seconds ({retrieval_time/total_time*100:.1f}%)")
+        print(f"  └─ Response Processing:   {response_processing_time:.3f} seconds ({response_processing_time/total_time*100:.1f}%)")
+        print(f"\n  *KB Retrieval includes: query planning, knowledge source")
+        print(f"   selection, search execution, and answer synthesis by Azure OpenAI")
+        print("=" * 80)
         
     except Exception as e:
         print(f"\nError: {str(e)}")
