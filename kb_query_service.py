@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import time
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from azure.core.credentials import AzureKeyCredential
@@ -19,6 +19,10 @@ from azure.search.documents.knowledgebases.models import (
     KnowledgeBaseMessage,
     KnowledgeBaseMessageTextContent,
     KnowledgeBaseRetrievalRequest,
+    KnowledgeRetrievalLowReasoningEffort,
+    KnowledgeRetrievalMediumReasoningEffort,
+    KnowledgeRetrievalMinimalReasoningEffort,
+    KnowledgeRetrievalOutputMode,
     SearchIndexKnowledgeSourceParams,
 )
 
@@ -58,7 +62,56 @@ def _get_kb_client() -> KnowledgeBaseRetrievalClient:
     )
 
 
-def _build_request(question: str) -> KnowledgeBaseRetrievalRequest:
+_REASONING_FACTORIES: Dict[str, Any] = {
+    "minimal": KnowledgeRetrievalMinimalReasoningEffort,
+    "low": KnowledgeRetrievalLowReasoningEffort,
+    "medium": KnowledgeRetrievalMediumReasoningEffort,
+}
+
+_REASONING_CANONICAL: Dict[str, str] = {key: key for key in _REASONING_FACTORIES}
+
+_OUTPUT_MODE_MAP: Dict[str, Tuple[str, KnowledgeRetrievalOutputMode]] = {
+    "extractivedata": ("extractiveData", KnowledgeRetrievalOutputMode.EXTRACTIVE_DATA),
+    "answersynthesis": ("answerSynthesis", KnowledgeRetrievalOutputMode.ANSWER_SYNTHESIS),
+}
+
+
+def _normalize_reasoning_choice(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+
+    if normalized not in _REASONING_FACTORIES:
+        raise ValueError(
+            "retrievalReasoningEffort must be one of: minimal, low, or medium."
+        )
+    return _REASONING_CANONICAL[normalized]
+
+
+def _normalize_output_mode(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+
+    if normalized not in _OUTPUT_MODE_MAP:
+        raise ValueError(
+            "knowledgeRetrievalOutputMode must be either extractiveData or answerSynthesis."
+        )
+
+    return _OUTPUT_MODE_MAP[normalized][0]
+
+
+def _build_request(
+    question: str,
+    reasoning_choice: Optional[str] = None,
+    output_mode_choice: Optional[str] = None,
+) -> KnowledgeBaseRetrievalRequest:
     settings = _load_settings()
     source_params = [
         SearchIndexKnowledgeSourceParams(
@@ -81,16 +134,28 @@ def _build_request(question: str) -> KnowledgeBaseRetrievalRequest:
         ),
     ]
 
-    return KnowledgeBaseRetrievalRequest(
-        messages=[
+    request_kwargs: Dict[str, Any] = {
+        "messages": [
             KnowledgeBaseMessage(
                 role="user",
                 content=[KnowledgeBaseMessageTextContent(text=question.strip())],
             )
         ],
-        knowledge_source_params=source_params,
-        include_activity=True,
-    )
+        "knowledge_source_params": source_params,
+        "include_activity": True,
+    }
+
+    if reasoning_choice:
+        request_kwargs["retrieval_reasoning_effort"] = _REASONING_FACTORIES[
+            reasoning_choice
+        ]()
+
+    if output_mode_choice:
+        request_kwargs["output_mode"] = _OUTPUT_MODE_MAP[
+            output_mode_choice.lower() if output_mode_choice else ""
+        ][1]
+
+    return KnowledgeBaseRetrievalRequest(**request_kwargs)
 
 
 def _extract_answer_texts(result: Any) -> List[str]:
@@ -167,14 +232,21 @@ def _format_references(result: Any) -> List[Dict[str, Any]]:
     return formatted
 
 
-def execute_kb_query(question: str) -> Dict[str, Any]:
+def execute_kb_query(
+    question: str,
+    retrieval_reasoning_effort: Optional[str] = None,
+    output_mode: Optional[str] = None,
+) -> Dict[str, Any]:
     """Execute a single KB query and return structured data for UI layers."""
 
     if not question or not question.strip():
         raise ValueError("Question text is required.")
 
+    reasoning_choice = _normalize_reasoning_choice(retrieval_reasoning_effort)
+    output_mode_choice = _normalize_output_mode(output_mode)
+
     request_timing_start = time.perf_counter()
-    request = _build_request(question)
+    request = _build_request(question, reasoning_choice, output_mode_choice)
     request_prep_time = time.perf_counter() - request_timing_start
 
     retrieval_start = time.perf_counter()
@@ -202,6 +274,10 @@ def execute_kb_query(question: str) -> Dict[str, Any]:
         "metadata": {
             "knowledgeBaseName": settings["knowledge_base_name"],
             "searchEndpoint": settings["search_url"],
+            "requestOverrides": {
+                "retrievalReasoningEffort": reasoning_choice,
+                "knowledgeRetrievalOutputMode": output_mode_choice,
+            },
         },
         "activity": getattr(result, "activity", None),
     }

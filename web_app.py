@@ -1,6 +1,7 @@
 """FastAPI web application for interactive knowledge base queries."""
 
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -21,6 +22,19 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 class QueryPayload(BaseModel):
     question: str = Field(..., min_length=1, description="User question")
+    retrieval_reasoning_effort: Optional[str] = Field(
+        default=None,
+        alias="retrievalReasoningEffort",
+        description="Optional override for retrieval reasoning effort",
+    )
+    output_mode: Optional[str] = Field(
+        default=None,
+        alias="knowledgeRetrievalOutputMode",
+        description="Optional override for knowledge retrieval output mode",
+    )
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -38,7 +52,11 @@ async def index(request: Request) -> HTMLResponse:
 @app.post("/api/query")
 async def query_kb(payload: QueryPayload):
     try:
-        result = execute_kb_query(payload.question)
+        result = execute_kb_query(
+            payload.question,
+            retrieval_reasoning_effort=payload.retrieval_reasoning_effort,
+            output_mode=payload.output_mode,
+        )
         return result
     except KBConfigurationError as exc:  # pragma: no cover - configuration guard
         raise HTTPException(status_code=500, detail=str(exc)) from exc

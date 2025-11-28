@@ -13,14 +13,22 @@
 <body>
     <div class="app-shell">
         <header class="app-header">
-            <div>
-                <p class="eyebrow">Contoso Knowledge Base</p>
-                <h1>Ask questions with grounded answers</h1>
-                <p class="subtitle">Backed by Azure AI Search, Azure OpenAI, and Bing (Web Knowledge Source).</p>
+            <div class="header-top">
+                <span class="brand-badge">FoundryIQ Demo</span>
+                <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-label="Toggle color theme">
+                    Switch to light mode
+                </button>
             </div>
-            <div class="connection-pill">
-                <span class="label">Connected to</span>
-                <span class="value">{{ config.searchEndpoint }}</span>
+            <div class="header-main">
+                <div>
+                    <p class="eyebrow">Contoso Knowledge Base</p>
+                    <h1>Ask questions with grounded answers</h1>
+                    <p class="subtitle">Backed by Azure AI Search, Azure OpenAI, and Bing (Web Knowledge Source).</p>
+                </div>
+                <div class="connection-pill">
+                    <span class="label">Connected to</span>
+                    <span class="value">{{ config.searchEndpoint }}</span>
+                </div>
             </div>
         </header>
 
@@ -47,6 +55,26 @@
                     <input id="question" name="question" type="text" placeholder="e.g., What insurance policies does Contoso offer?" autocomplete="off" required />
                     <button type="submit" id="ask-button">Ask</button>
                 </div>
+                <div class="advanced-options" aria-label="Retrieval settings">
+                    <div class="form-field">
+                        <label for="retrievalReasoningEffort">Retrieval reasoning effort</label>
+                        <select id="retrievalReasoningEffort" name="retrievalReasoningEffort">
+                            <option value="">Use knowledge base default</option>
+                            <option value="minimal">Minimal — skips planning</option>
+                            <option value="low">Low — lightweight planning</option>
+                            <option value="medium">Medium — thorough planning</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="knowledgeRetrievalOutputMode">Knowledge retrieval output mode</label>
+                        <select id="knowledgeRetrievalOutputMode" name="knowledgeRetrievalOutputMode">
+                            <option value="">Use knowledge base default</option>
+                            <option value="answerSynthesis">Answer synthesis (LLM-written)</option>
+                            <option value="extractiveData">Extractive data (verbatim)</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="helper-text">These options map directly to the preview REST settings (<code>retrievalReasoningEffort</code> and <code>outputMode</code>) described in the Azure documentation.</p>
             </form>
 
             <section id="conversation" class="conversation" aria-live="polite">

@@ -1,6 +1,9 @@
 const form = document.getElementById("question-form");
 const input = document.getElementById("question");
 const askButton = document.getElementById("ask-button");
+const reasoningSelect = document.getElementById("retrievalReasoningEffort");
+const outputModeSelect = document.getElementById("knowledgeRetrievalOutputMode");
+const themeToggle = document.getElementById("theme-toggle");
 const conversation = document.getElementById("conversation");
 const emptyState = document.getElementById("empty-state");
 const modal = document.getElementById("citation-modal");
@@ -19,6 +22,8 @@ const state = {
     interactions: [],
     config: kbConfig,
 };
+
+const THEME_STORAGE_KEY = "kbThemePreference";
 
 let markdownConfigured = false;
 const configureMarkdown = () => {
@@ -59,6 +64,24 @@ const renderMarkdown = (text) => {
 
 const formatSeconds = (value) => `${value.toFixed(3)}s`;
 
+const REASONING_LABELS = {
+    minimal: "Minimal — skips planning",
+    low: "Low — lightweight planning",
+    medium: "Medium — thorough planning",
+};
+
+const OUTPUT_MODE_LABELS = {
+    extractiveData: "Extractive data (verbatim)",
+    answerSynthesis: "Answer synthesis (LLM-written)",
+};
+
+const formatOverrideValue = (value, labels) => {
+    if (!value) {
+        return "Knowledge base default";
+    }
+    return labels[value] || value;
+};
+
 const toggleLoading = (isLoading) => {
     askButton.disabled = isLoading;
     if (isLoading) {
@@ -67,6 +90,29 @@ const toggleLoading = (isLoading) => {
     } else if (askButton.dataset.originalText) {
         askButton.textContent = askButton.dataset.originalText;
     }
+};
+
+const applyTheme = (theme) => {
+    const normalized = theme === "light" ? "light" : "dark";
+    document.body.dataset.theme = normalized;
+    if (themeToggle) {
+        const nextLabel = normalized === "light" ? "Switch to dark mode" : "Switch to light mode";
+        themeToggle.textContent = nextLabel;
+        themeToggle.setAttribute("aria-pressed", normalized === "light" ? "true" : "false");
+        themeToggle.setAttribute("aria-label", `${nextLabel} (current theme ${normalized})`);
+    }
+};
+
+const initializeTheme = () => {
+    let storedTheme = null;
+    if (typeof window !== "undefined") {
+        storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    }
+
+    const prefersLight =
+        typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+
+    applyTheme(storedTheme || (prefersLight ? "light" : "dark"));
 };
 
 const renderConversation = () => {
@@ -134,9 +180,43 @@ const renderConversation = () => {
         card.appendChild(header);
         card.appendChild(answerBlock);
         card.appendChild(metrics);
+
+        const overrides = interaction.metadata?.requestOverrides || {};
+        const settings = document.createElement("div");
+        settings.className = "request-settings";
+        settings.innerHTML = `
+            <span class="label">Request overrides</span>
+            <div class="settings-grid">
+                <div>
+                    <span class="setting-name">Reasoning</span>
+                    <span class="setting-value">${formatOverrideValue(
+                        overrides.retrievalReasoningEffort,
+                        REASONING_LABELS
+                    )}</span>
+                </div>
+                <div>
+                    <span class="setting-name">Output mode</span>
+                    <span class="setting-value">${formatOverrideValue(
+                        overrides.knowledgeRetrievalOutputMode,
+                        OUTPUT_MODE_LABELS
+                    )}</span>
+                </div>
+            </div>
+        `;
+        card.appendChild(settings);
         conversation.appendChild(card);
     });
 };
+
+initializeTheme();
+
+themeToggle?.addEventListener("click", () => {
+    const nextTheme = document.body.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(nextTheme);
+    if (typeof window !== "undefined") {
+        window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    }
+});
 
 const openCitation = (citation) => {
     modalBody.innerHTML = `
@@ -181,7 +261,11 @@ form.addEventListener("submit", async (event) => {
         const response = await fetch("/api/query", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question }),
+            body: JSON.stringify({
+                question,
+                ...(reasoningSelect?.value ? { retrievalReasoningEffort: reasoningSelect.value } : {}),
+                ...(outputModeSelect?.value ? { knowledgeRetrievalOutputMode: outputModeSelect.value } : {}),
+            }),
         });
 
         if (!response.ok) {
