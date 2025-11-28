@@ -50,18 +50,26 @@ ks-sample1/
 ├── .gitignore                    # Git ignore file
 ├── requirements.txt              # Python dependencies
 ├── kb_query_service.py           # Shared helper for issuing KB queries
-├── create_knowledge_sources.py   # Creates knowledge sources from indexes and web search
-├── create_kb.py                  # Creates the knowledge base that orchestrates sources
 ├── query_kb.py                   # Console query experience with citation display
-├── web_app.py                    # FastAPI-powered responsive web app
+├── web_app.py                    # FastAPI-powered responsive web app (served via Uvicorn)
 ├── templates/
 │   └── index.html                # Web UI shell rendered by FastAPI
-└── static/
-   ├── css/styles.css            # Modern responsive styling
-   └── js/app.js                 # Client-side interactivity
-├── list_indexes.py               # Utility to list all indexes in your search service
+├── static/
+│   ├── css/styles.css            # Modern responsive styling + theme definitions
+│   └── js/app.js                 # Client-side interactivity, theme + retrieval controls
+├── ops/                          # One-time administrative scripts
+│   ├── create_knowledge_sources.py   # Creates knowledge sources from indexes and web search
+│   ├── create_kb.py                  # Creates the knowledge base that orchestrates sources
+│   └── list_indexes.py               # Utility to list all indexes in your search service
 └── README.md                     # This file
 ```
+
+## Architecture Overview
+
+- **FastAPI + Uvicorn backend (`web_app.py`)** exposes both HTML pages and `/api/query` endpoints. Every request ultimately flows through a single `kb_query_service` instance so console and web experiences share throttling, logging, and error handling.
+- **Shared knowledge client (`kb_query_service.py`)** wraps the FoundryIQ KnowledgeBaseRetrievalClient, normalizes timing metrics, and surfaces knobs for `retrieval_reasoning_effort` plus output style so either UI can override defaults without duplicating code.
+- **Frontend (`templates/index.html`, `static/js/app.js`, `static/css/styles.css`)** renders the chat UI, wired theme toggle (light/dark/system) with `localStorage` persistence, exposes dropdowns for retrieval reasoning effort and answer style, and orchestrates citation modals plus performance indicators.
+- **Operations scripts (`ops/*.py`)** are intentionally isolated so day-to-day app use never mixes with one-time provisioning commands (create or inspect knowledge sources, knowledge bases, and indexes).
 
 ## Prerequisites
 
@@ -128,7 +136,7 @@ pip install -r requirements.txt
 List all indexes in your Azure AI Search service to verify they exist:
 
 ```powershell
-python list_indexes.py
+python ops/list_indexes.py
 ```
 
 **If you don't have existing indexes**, you have two options:
@@ -145,14 +153,14 @@ FoundryIQ can automatically create indexing pipelines from:
 - **Microsoft Fabric OneLake**
 - **SharePoint sites** (with Microsoft Purview integration)
 
-Update `create_knowledge_sources.py` to point to your data sources, and FoundryIQ will handle the rest.
+Update `ops/create_knowledge_sources.py` to point to your data sources, and FoundryIQ will handle the rest.
 
 ### Step 4: Create Knowledge Sources
 
 Run the script to create knowledge sources from your indexes and web search:
 
 ```powershell
-python create_knowledge_sources.py
+python ops/create_knowledge_sources.py
 ```
 
 This creates:
@@ -164,7 +172,7 @@ This creates:
 Create the knowledge base that orchestrates all sources:
 
 ```powershell
-python create_kb.py
+python ops/create_kb.py
 ```
 
 This creates `contoso-multi-index-kb` with:
@@ -202,6 +210,8 @@ Then browse to `http://127.0.0.1:8000` to use a modern chat-style UI featuring:
 
 - **Session-based querying** that reuses the same KnowledgeBaseRetrievalClient as the console app.
 - **Responsive layout** optimized for desktop and mobile.
+- **Theme toggle + system preference sync** so users can switch light/dark modes with styles persisted via `localStorage`.
+- **Retrieval controls** that let you override reasoning effort (low/medium/high) and answer style (concise vs. structured) per question.
 - **Inline citation chips** – click any reference to open a modal with title, URL, and readable content/snippet.
 - **Performance metrics** showing total time plus breakdown for request prep, retrieval, and response processing.
 
@@ -219,14 +229,14 @@ Then browse to `http://127.0.0.1:8000` to use a modern chat-style UI featuring:
 
 | File | Purpose | When to Run |
 |------|---------|-------------|
-| `create_knowledge_sources.py` | Creates knowledge source objects from your indexes and Bing search | **First**: After configuring `.env` and verifying indexes exist |
-| `create_kb.py` | Creates the knowledge base that orchestrates all sources | **Second**: After knowledge sources are created |
+| `ops/create_knowledge_sources.py` | Creates knowledge source objects from your indexes and Bing search | **First**: After configuring `.env` and verifying indexes exist |
+| `ops/create_kb.py` | Creates the knowledge base that orchestrates all sources | **Second**: After knowledge sources are created |
 
 ### Utility Scripts
 
 | File | Purpose | When to Use |
 |------|---------|-------------|
-| `list_indexes.py` | Lists all indexes in your Azure AI Search service | Use to verify your indexes exist and get their exact names |
+| `ops/list_indexes.py` | Lists all indexes in your Azure AI Search service | Use to verify your indexes exist and get their exact names |
 | `kb_query_service.py` | Shared query helper that returns structured answers, citations, and timing | Automatically used by both console and web apps |
 | `query_kb.py` | Console-based interactive query interface with citation display | **Anytime**: After knowledge base is created, to test queries |
 | `web_app.py` + `/templates` + `/static` | FastAPI web app with responsive UI, citation modal, performance metrics | Use when you want an end-user-friendly experience |
@@ -236,11 +246,11 @@ Then browse to `http://127.0.0.1:8000` to use a modern chat-style UI featuring:
 ```
 1. Configure .env with your Azure credentials
    ↓
-2. (Optional) Run list_indexes.py to verify your indexes
+2. (Optional) Run ops/list_indexes.py to verify your indexes
    ↓
-3. Run create_knowledge_sources.py to create knowledge sources
+3. Run ops/create_knowledge_sources.py to create knowledge sources
    ↓
-4. Run create_kb.py to create the knowledge base
+4. Run ops/create_kb.py to create the knowledge base
    ↓
 5. Run query_kb.py to interactively query your knowledge base
 ```
@@ -283,8 +293,8 @@ This is configured with `retrieval_reasoning_effort: low` in this demo, but can 
    ```env
    index_newdata=my-new-index-name
    ```
-3. Update `create_knowledge_sources.py` to create a knowledge source for the new index
-4. Update `create_kb.py` to add a reference to the new knowledge source
+3. Update `ops/create_knowledge_sources.py` to create a knowledge source for the new index
+4. Update `ops/create_kb.py` to add a reference to the new knowledge source
 5. Update `query_kb.py` to include the new source in retrieval requests
 
 ### Use Automatic Indexing from Blob Storage
@@ -323,7 +333,7 @@ fabric_source = FabricKnowledgeSource(
 ```
 
 ### Increase Retrieval Reasoning Effort
-In `create_kb.py`, change:
+In `ops/create_kb.py`, change:
 ```python
 retrieval_reasoning_effort="low"  # → "medium" or "high"
 ```
