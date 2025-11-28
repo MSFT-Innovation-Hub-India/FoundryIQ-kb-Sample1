@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contoso Knowledge Base</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f172a'/%3E%3Ctext x='50' y='65' text-anchor='middle' font-size='60' fill='%2338bdf8' font-family='Segoe UI, Arial, sans-serif'%3EC%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Contoso Knowledge Base</p>
+                <h1>Ask questions with grounded answers</h1>
+                <p class="subtitle">Backed by Azure AI Search, Azure OpenAI, and Bing (Web Knowledge Source).</p>
+            </div>
+            <div class="connection-pill">
+                <span class="label">Connected to</span>
+                <span class="value">{{ config.searchEndpoint }}</span>
+            </div>
+        </header>
+
+        <section class="info-grid">
+            <article>
+                <h2>Knowledge Base</h2>
+                <p>{{ config.knowledgeBaseName }}</p>
+            </article>
+            <article>
+                <h2>Knowledge Sources</h2>
+                <ul>
+                    {% for index in config.indexes %}
+                    <li>{{ index }}</li>
+                    {% endfor %}
+                    <li>Bing Web Knowledge Source</li>
+                </ul>
+            </article>
+        </section>
+
+        <main class="chat-panel">
+            <form id="question-form" class="question-form">
+                <label for="question">Ask a question</label>
+                <div class="input-row">
+                    <input id="question" name="question" type="text" placeholder="e.g., What insurance policies does Contoso offer?" autocomplete="off" required />
+                    <button type="submit" id="ask-button">Ask</button>
+                </div>
+            </form>
+
+            <section id="conversation" class="conversation" aria-live="polite">
+                <div class="empty-state" id="empty-state">
+                    <p>Start by asking a question to see AI-generated answers, citations, and performance metrics.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="citation-modal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="citation-title">
+            <button class="close-button" id="close-modal" aria-label="Close citation details">&times;</button>
+            <div id="citation-body"></div>
+        </div>
+    </div>
+
+    <script id="kb-config" type="application/json">{{ config | tojson | safe }}</script>
+    <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

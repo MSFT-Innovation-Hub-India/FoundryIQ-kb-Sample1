@@ -1,0 +1,351 @@
+:root {
+    color-scheme: light dark;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-alt: #111827;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-soft: rgba(56, 189, 248, 0.15);
+    --border: rgba(148, 163, 184, 0.3);
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at top, rgba(56, 189, 248, 0.3), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.35), transparent 45%),
+        var(--bg);
+    color: var(--text);
+}
+
+.app-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.app-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.subtitle {
+    color: var(--muted);
+    margin-top: 0.5rem;
+}
+
+.connection-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 240px;
+}
+
+.connection-pill .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.connection-pill .value {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.info-grid article {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+
+.info-grid h2 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+}
+
+.info-grid ul {
+    padding-left: 1.2rem;
+    margin: 0.5rem 0 0;
+    color: var(--text);
+}
+
+.chat-panel {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 25px 50px rgba(15, 23, 42, 0.35);
+}
+
+.question-form label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.65rem;
+}
+
+.input-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.question-form input {
+    flex: 1;
+    padding: 0.9rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--text);
+}
+
+.question-form button {
+    padding: 0 1.8rem;
+    border-radius: 999px;
+    border: none;
+    font-weight: 600;
+    background: linear-gradient(120deg, #38bdf8, #6366f1);
+    color: #0f172a;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.question-form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.question-form button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+}
+
+.conversation {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    border: 1px dashed var(--border);
+    border-radius: 1rem;
+    color: var(--muted);
+}
+
+.message-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message-card h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+}
+
+.answer-body {
+    line-height: 1.6;
+    white-space: normal;
+}
+
+.answer-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+}
+
+.answer-body th,
+.answer-body td {
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+}
+
+.answer-body thead {
+    background: rgba(148, 163, 184, 0.15);
+}
+
+.answer-body hr {
+    border: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    margin: 1.5rem 0;
+}
+
+.citation-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.citation-chip {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.citation-chip:hover {
+    background: var(--accent-soft);
+}
+
+.citation-note {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 0.35rem;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.metric-card {
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    padding: 0.85rem 1rem;
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.metric-card span {
+    display: block;
+}
+
+.metric-card .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.metric-card .value {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.loading::after {
+    content: "";
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.modal[aria-hidden="false"] {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--surface);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .question-form {
+        width: 100%;
+    }
+
+    .input-row {
+        flex-direction: column;
+    }
+
+    .question-form button {
+        width: 100%;
+    }
+
+    .app-shell {
+        padding: 2rem 1rem;
+    }
+}

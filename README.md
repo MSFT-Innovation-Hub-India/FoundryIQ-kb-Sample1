@@ -49,9 +49,16 @@ ks-sample1/
 ├── .env.example                  # Template for environment configuration
 ├── .gitignore                    # Git ignore file
 ├── requirements.txt              # Python dependencies
+├── kb_query_service.py           # Shared helper for issuing KB queries
 ├── create_knowledge_sources.py   # Creates knowledge sources from indexes and web search
 ├── create_kb.py                  # Creates the knowledge base that orchestrates sources
-├── query_kb.py                   # Interactive query interface with citation display
+├── query_kb.py                   # Console query experience with citation display
+├── web_app.py                    # FastAPI-powered responsive web app
+├── templates/
+│   └── index.html                # Web UI shell rendered by FastAPI
+└── static/
+   ├── css/styles.css            # Modern responsive styling
+   └── js/app.js                 # Client-side interactivity
 ├── list_indexes.py               # Utility to list all indexes in your search service
 └── README.md                     # This file
 ```
@@ -165,7 +172,7 @@ This creates `contoso-multi-index-kb` with:
 - Azure OpenAI integration for answer synthesis
 - Low reasoning effort (configurable)
 
-### Step 6: Query the Knowledge Base
+### Step 6: Query the Knowledge Base (Console)
 
 Launch the interactive query interface:
 
@@ -182,6 +189,21 @@ Try these example queries:
 The system will display:
 - **Answer**: Synthesized response from Azure OpenAI
 - **Citations**: Source documents with actual text content, URLs, and relevance scores
+
+### Step 7: Run the Responsive Web App
+
+Launch the FastAPI-powered web interface:
+
+```powershell
+uvicorn web_app:app --reload
+```
+
+Then browse to `http://127.0.0.1:8000` to use a modern chat-style UI featuring:
+
+- **Session-based querying** that reuses the same KnowledgeBaseRetrievalClient as the console app.
+- **Responsive layout** optimized for desktop and mobile.
+- **Inline citation chips** – click any reference to open a modal with title, URL, and readable content/snippet.
+- **Performance metrics** showing total time plus breakdown for request prep, retrieval, and response processing.
 
 ## File Descriptions
 
@@ -205,7 +227,9 @@ The system will display:
 | File | Purpose | When to Use |
 |------|---------|-------------|
 | `list_indexes.py` | Lists all indexes in your Azure AI Search service | Use to verify your indexes exist and get their exact names |
-| `query_kb.py` | Interactive query interface with citation display | **Anytime**: After knowledge base is created, to test queries |
+| `kb_query_service.py` | Shared query helper that returns structured answers, citations, and timing | Automatically used by both console and web apps |
+| `query_kb.py` | Console-based interactive query interface with citation display | **Anytime**: After knowledge base is created, to test queries |
+| `web_app.py` + `/templates` + `/static` | FastAPI web app with responsive UI, citation modal, performance metrics | Use when you want an end-user-friendly experience |
 
 ## Workflow Summary
 

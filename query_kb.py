@@ -1,85 +1,16 @@
-"""Interactive Query Interface for Knowledge Base.
+"""Interactive console interface for the knowledge base."""
 
-This script provides an interactive console interface for querying the knowledge base.
-It accepts natural language questions from users and retrieves answers using the
-agentic retrieval pipeline with answer synthesis.
-
-The knowledge base queries multiple sources:
-- Contoso Insurance FAQ index
-- Contoso Retail index
-- Contoso Gaming index
-- Bing web search (for real-time web data)
-
-The system uses Azure OpenAI to:
-1. Plan which knowledge sources to query
-2. Formulate optimized search queries
-3. Synthesize coherent answers from retrieved documents
-4. Include citations and references
-
-Environment Variables Required:
-    search_url: Azure AI Search service endpoint
-    search_api_key: API key for Azure AI Search
-    index_insurance: Name of the insurance FAQ index
-    index_retail: Name of the retail index
-    index_gaming: Name of the gaming index
-
-Prerequisites:
-    - Knowledge base must be created (run create_kb.py)
-    - All knowledge sources must exist
-    - Azure OpenAI must be configured with valid credentials
-
-Usage:
-    python query_kb.py
-    
-    Then enter your questions at the prompt.
-    Type 'exit', 'quit', or 'q' to end the session.
-
-Example Queries:
-    - "What insurance policies does Contoso offer?"
-    - "Tell me about Contoso retail products"
-    - "What games are available from Contoso?"
-    - "What's the latest news on artificial intelligence?" (uses web search)
-"""
-
-import os
-import time
-from dotenv import load_dotenv
-from azure.core.credentials import AzureKeyCredential
-from azure.search.documents.knowledgebases import KnowledgeBaseRetrievalClient
-from azure.search.documents.knowledgebases.models import (
-    KnowledgeBaseMessage,
-    KnowledgeBaseMessageTextContent,
-    KnowledgeBaseRetrievalRequest,
-    SearchIndexKnowledgeSourceParams
-)
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Get configuration from environment variables
-search_url = os.getenv("search_url")
-search_api_key = os.getenv("search_api_key")
-index_insurance = os.getenv("index_insurance", "contoso-insurance-faq-index")
-index_retail = os.getenv("index_retail", "contoso-retail-index")
-index_gaming = os.getenv("index_gaming", "contoso-gaming-index")
-knowledge_base_name = "contoso-multi-index-kb"
-
-# Create knowledge base retrieval client
-kb_client = KnowledgeBaseRetrievalClient(
-    endpoint=search_url,
-    knowledge_base_name=knowledge_base_name,
-    credential=AzureKeyCredential(search_api_key)
-)
+from kb_query_service import execute_kb_query, get_kb_configuration
 
 print("=" * 80)
 print("Knowledge Base Query Interface")
 print("=" * 80)
-print(f"Connected to: {search_url}")
-print(f"Knowledge Base: {knowledge_base_name}")
+config = get_kb_configuration()
+print(f"Connected to: {config['searchEndpoint']}")
+print(f"Knowledge Base: {config['knowledgeBaseName']}")
 print("\nThis knowledge base includes:")
-print("  • Contoso Insurance FAQ")
-print("  • Contoso Retail")
-print("  • Contoso Gaming")
+for idx_name in config["indexes"]:
+    print(f"  • {idx_name}")
 print("  • Bing Web Search (real-time web data)")
 print("\nType your questions and press Enter.")
 print("Type 'exit' or 'quit' to end the session.\n")
@@ -100,135 +31,75 @@ while True:
         continue
     
     try:
-        # Start total timing
-        total_start_time = time.time()
-        
-        # Time: Request preparation
-        request_prep_start = time.time()
-        request = KnowledgeBaseRetrievalRequest(
-            messages=[
-                KnowledgeBaseMessage(
-                    role="user",
-                    content=[KnowledgeBaseMessageTextContent(text=user_query)]
-                )
-            ],
-            knowledge_source_params=[
-                SearchIndexKnowledgeSourceParams(
-                    knowledge_source_name=index_insurance,
-                    include_references=True,
-                    include_reference_source_data=True,
-                    always_query_source=False
-                ),
-                SearchIndexKnowledgeSourceParams(
-                    knowledge_source_name=index_retail,
-                    include_references=True,
-                    include_reference_source_data=True,
-                    always_query_source=False
-                ),
-                SearchIndexKnowledgeSourceParams(
-                    knowledge_source_name=index_gaming,
-                    include_references=True,
-                    include_reference_source_data=True,
-                    always_query_source=False
-                )
-            ],
-            include_activity=True
-        )
-        request_prep_time = time.time() - request_prep_start
-        
-        # Time: Knowledge base retrieval (includes query planning, search, and answer synthesis)
         print("\nSearching knowledge base...")
-        retrieval_start = time.time()
-        result = kb_client.retrieve(request)
-        retrieval_time = time.time() - retrieval_start
+        query_result = execute_kb_query(user_query)
         
-        # Time: Response processing
-        response_processing_start = time.time()
         # Display response
         print("\n" + "=" * 80)
         print("ANSWER")
         print("=" * 80)
-        if result.response and len(result.response) > 0:
-            for response_item in result.response:
-                if response_item.content:
-                    for content_item in response_item.content:
-                        if hasattr(content_item, 'text'):
-                            print(content_item.text)
-                            print()
+        answers = query_result.get("answers", [])
+        if answers:
+            for answer_text in answers:
+                print(answer_text)
+                print()
         else:
             print("No answer found.")
         
         # Display references/citations if available
-        if hasattr(result, 'references') and result.references:
+        citations = query_result.get("citations", [])
+        if citations:
             print("\n" + "=" * 80)
             print("CITATIONS")
             print("=" * 80)
-            for idx, ref in enumerate(result.references):
-                print(f"\n[ref_id:{idx}]")
+            for citation in citations:
+                print(f"\n[ref_id:{citation['id']}]")
                 print("-" * 80)
                 
-                # Display knowledge source type
-                source_type = getattr(ref, 'type', 'unknown')
+                source_type = citation.get("type", "unknown")
                 print(f"Source Type: {source_type}")
-                
-                # Handle web sources differently from search index sources
-                if source_type == 'web':
-                    # Web Knowledge Source references don't return extractive snippets (only formulated answers)
-                    if hasattr(ref, 'source_data') and ref.source_data:
-                        if isinstance(ref.source_data, dict):
-                            url = ref.source_data.get('url', 'Unknown URL')
-                            title = ref.source_data.get('name', 'Web Source')
-                            
-                            print(f"Title: {title}")
-                            print(f"URL: {url}")
-                            print("\nCitation text is unavailable for Web Knowledge Source references.")
-                    else:
-                        print("Web Knowledge Source references omit citation snippets by design.")
-                
-                elif source_type == 'searchIndex':
-                    # Search index source - get document and content
-                    if hasattr(ref, 'additional_properties') and isinstance(ref.additional_properties, dict):
-                        title = ref.additional_properties.get('title', 'Unknown')
-                        print(f"Document: {title}")
-                    
-                    # Display reranker score if available (only for search indexes)
-                    if hasattr(ref, 'reranker_score') and ref.reranker_score is not None:
-                        print(f"Relevance Score: {ref.reranker_score:.4f}")
-                    
-                    # Extract and display content from source_data
-                    if hasattr(ref, 'source_data') and ref.source_data:
-                        if isinstance(ref.source_data, dict):
-                            content = ref.source_data.get('content')
-                            if content:
-                                print(f"\nCitation Text:")
-                                print("-" * 80)
-                                # Clean up the content formatting
-                                content_text = content.replace('\r\n', '\n').replace('\t', '  ')
-                                print(content_text)
-                            else:
-                                print("\nNo content available for this reference.")
-                    else:
-                        print("\nNo source data available for this reference.")
-                
-                else:
-                    # Unknown source type - display whatever is available
-                    print(f"Unknown source type: {source_type}")
-                    if hasattr(ref, 'source_data') and ref.source_data:
-                        print(f"Source Data: {ref.source_data}")
+
+                title = citation.get("title") or citation.get("document") or "Unknown"
+                if title:
+                    print(f"Title: {title}")
+
+                if citation.get("url"):
+                    print(f"URL: {citation['url']}")
+
+                if citation.get("relevanceScore") is not None:
+                    print(f"Relevance Score: {citation['relevanceScore']:.4f}")
+
+                citation_text = citation.get("citationText")
+                if citation_text:
+                    print(f"\nCitation Text:")
+                    print("-" * 80)
+                    print(citation_text)
+                elif citation.get("note"):
+                    print(f"\nNote: {citation['note']}")
             
             print("\n" + "=" * 80)
-        
-        response_processing_time = time.time() - response_processing_start
-        total_time = time.time() - total_start_time
+        else:
+            print("\n" + "=" * 80)
+            print("CITATIONS")
+            print("=" * 80)
+            print("No citations were returned for this answer.")
+            print("\n" + "=" * 80)
         
         # Display timing information
+        timing = query_result.get("timing", {})
         print("\n" + "=" * 80)
         print("PERFORMANCE METRICS")
         print("=" * 80)
+        total_time = timing.get("total", 0.0)
+        request_time = timing.get("requestPreparation", 0.0)
+        retrieval_time = timing.get("kbRetrieval", 0.0)
+        processing_time = timing.get("responseProcessing", 0.0)
+        pct = lambda value: (value / total_time * 100) if total_time else 0.0
+
         print(f"Total Query Time:           {total_time:.3f} seconds")
-        print(f"  ├─ Request Preparation:   {request_prep_time:.3f} seconds ({request_prep_time/total_time*100:.1f}%)")
-        print(f"  ├─ KB Retrieval*:         {retrieval_time:.3f} seconds ({retrieval_time/total_time*100:.1f}%)")
-        print(f"  └─ Response Processing:   {response_processing_time:.3f} seconds ({response_processing_time/total_time*100:.1f}%)")
+        print(f"  ├─ Request Preparation:   {request_time:.3f} seconds ({pct(request_time):.1f}%)")
+        print(f"  ├─ KB Retrieval*:         {retrieval_time:.3f} seconds ({pct(retrieval_time):.1f}%)")
+        print(f"  └─ Response Processing:   {processing_time:.3f} seconds ({pct(processing_time):.1f}%)")
         print(f"\n  *KB Retrieval includes: query planning, knowledge source")
         print(f"   selection, search execution, and answer synthesis by Azure OpenAI")
         print("=" * 80)
