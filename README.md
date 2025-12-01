@@ -21,10 +21,11 @@ This sample demonstrates key FoundryIQ capabilities:
 A reusable knowledge base (`contoso-multi-index-kb`) that orchestrates multiple knowledge sources and provides a unified query interface.
 
 ### 2. **Multiple Knowledge Sources**
-- **3 Azure AI Search Indexes** (indexed knowledge sources):
-  - Contoso Insurance FAQ Index
-  - Contoso Retail Index
-  - Contoso Gaming Index
+- **4 Azure AI Search Indexes** (indexed knowledge sources):
+   - Contoso Insurance FAQ Index
+   - Contoso Retail Index
+   - Contoso Gaming Index
+   - Nykaa Financials Indexer (financial performance data)
 - **1 Bing Web Search** (federated knowledge source for real-time web data)
 
 ### 3. **Agentic Retrieval**
@@ -60,6 +61,7 @@ ks-sample1/
 ├── ops/                          # One-time administrative scripts
 │   ├── create_knowledge_sources.py   # Creates knowledge sources from indexes and web search
 │   ├── create_kb.py                  # Creates the knowledge base that orchestrates sources
+│   ├── delete_knowledge_source.py    # Removes a knowledge source reference from a knowledge base
 │   └── list_indexes.py               # Utility to list all indexes in your search service
 └── README.md                     # This file
 ```
@@ -78,7 +80,7 @@ Before running this demo, you need:
 1. **Azure AI Search Service**
    - Service endpoint URL
    - API key with admin permissions
-   - 3 pre-existing search indexes (or create your own)
+   - 4 pre-existing search indexes (or create your own)
 
 2. **Azure OpenAI Service**
    - Endpoint URL
@@ -129,6 +131,7 @@ pip install -r requirements.txt
    index_insurance=contoso-insurance-faq-index
    index_retail=contoso-retail-index
    index_gaming=contoso-gaming-index
+   index_financials=nykaa-financials-indexer
    ```
 
 ### Step 3: Verify Your Search Indexes
@@ -164,7 +167,7 @@ python ops/create_knowledge_sources.py
 ```
 
 This creates:
-- 3 **SearchIndexKnowledgeSource** objects (one for each index)
+- 4 **SearchIndexKnowledgeSource** objects (one for each index)
 - 1 **WebKnowledgeSource** (for Bing web search)
 
 ### Step 5: Create the Knowledge Base
@@ -192,6 +195,7 @@ Try these example queries:
 - **"What types of insurance policies does Contoso offer?"** (queries insurance index)
 - **"Tell me about Contoso retail products"** (queries retail index)
 - **"My games are slowing down my computer. Suggest a remedy"** (queries gaming index + web)
+- **"Summarize Nykaa's financial performance over the past 3 years"** (queries Nykaa financials indexer)
 - **"What's the latest news on artificial intelligence?"** (uses Bing web search)
 
 The system will display:
@@ -231,6 +235,7 @@ Then browse to `http://127.0.0.1:8000` to use a modern chat-style UI featuring:
 |------|---------|-------------|
 | `ops/create_knowledge_sources.py` | Creates knowledge source objects from your indexes and Bing search | **First**: After configuring `.env` and verifying indexes exist |
 | `ops/create_kb.py` | Creates the knowledge base that orchestrates all sources | **Second**: After knowledge sources are created |
+| `ops/delete_knowledge_source.py` | Removes a knowledge source reference from a knowledge base | Run when you need to detach an index/web source from the KB |
 
 ### Utility Scripts
 
@@ -263,7 +268,7 @@ Knowledge sources represent the data repositories that FoundryIQ can access:
 - **Indexed Sources** (`SearchIndexKnowledgeSource`):
   - Content is chunked, vectorized, and stored in Azure AI Search
   - Enables hybrid search (keyword + semantic vector search)
-  - This demo uses 3 pre-existing search indexes
+- This demo uses 4 pre-existing search indexes (Insurance, Retail, Gaming, Nykaa Financials)
 
 - **Federated Sources** (`WebKnowledgeSource`):
   - Content is queried in real-time without indexing

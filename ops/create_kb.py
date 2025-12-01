@@ -16,6 +16,7 @@ Environment Variables Required:
     index_insurance: Name of the insurance FAQ index
     index_retail: Name of the retail index
     index_gaming: Name of the gaming index
+    index_financials: Name of the Nykaa financials index
     az-openai_endpoint: Azure OpenAI endpoint URL
     az-openai-deployment: Azure OpenAI deployment name
     az-openai-model: Azure OpenAI model name (e.g., gpt-4o)
@@ -31,7 +32,7 @@ Usage:
 
 Output:
     Creates or updates the 'contoso-multi-index-kb' knowledge base with:
-    - 3 search index knowledge sources
+    - 4 search index knowledge sources
     - 1 web search knowledge source
     - Azure OpenAI model configuration
 """
@@ -59,6 +60,7 @@ search_api_key = os.getenv("search_api_key")
 index_insurance = os.getenv("index_insurance", "contoso-insurance-faq-index")
 index_retail = os.getenv("index_retail", "contoso-retail-index")
 index_gaming = os.getenv("index_gaming", "contoso-gaming-index")
+index_financials = os.getenv("index_financials", "nykaa-financials-indexer")
 aoai_endpoint = os.getenv("az-openai_endpoint")
 aoai_deployment = os.getenv("az-openai-deployment")
 aoai_model = os.getenv("az-openai-model")
@@ -83,14 +85,21 @@ aoai_params = AzureOpenAIVectorizerParameters(
 
 knowledge_base = KnowledgeBase(
     name = "contoso-multi-index-kb",
-    description = "This knowledge base handles questions directed at three unrelated sample indexes and includes Bing web search for real-time information.",
-    retrieval_instructions = f"Use the {index_insurance} knowledge source for queries about Contoso Insurance policies, use the {index_retail} knowledge source for queries about Contoso Retail, use the {index_gaming} knowledge source for queries about Contoso Gaming, and use bing-web-search-ks for current events and real-time web information.",
+    description = "This knowledge base handles questions directed at four sample indexes and includes Bing web search for real-time information.",
+    retrieval_instructions = (
+        f"Use the {index_insurance} knowledge source for queries about Contoso Insurance policies, "
+        f"use the {index_retail} knowledge source for queries about Contoso Retail, "
+        f"use the {index_gaming} knowledge source for queries about Contoso Gaming, "
+        f"use the {index_financials} knowledge source for queries about Nykaa's financial performance, "
+        f"and use bing-web-search-ks for current events and real-time web information."
+    ),
     answer_instructions = "Provide a two sentence concise and informative answer based on the retrieved documents.",
     output_mode = KnowledgeRetrievalOutputMode.ANSWER_SYNTHESIS,
     knowledge_sources = [
         KnowledgeSourceReference(name = index_insurance),
         KnowledgeSourceReference(name = index_retail),
         KnowledgeSourceReference(name = index_gaming),
+        KnowledgeSourceReference(name = index_financials),
         KnowledgeSourceReference(name = "bing-web-search-ks"),
     ],
     models = [KnowledgeBaseAzureOpenAIModel(azure_open_ai_parameters = aoai_params)],

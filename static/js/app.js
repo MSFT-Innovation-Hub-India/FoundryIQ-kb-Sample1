@@ -33,9 +33,10 @@ const configureMarkdown = () => {
 
     window.marked.setOptions({
         gfm: true,
-        breaks: true,
+        breaks: false,
         mangle: false,
         headerIds: false,
+        pedantic: false,
     });
     markdownConfigured = true;
 };
@@ -55,7 +56,20 @@ const renderMarkdown = (text) => {
 
     if (typeof window !== "undefined" && window.marked && window.DOMPurify) {
         configureMarkdown();
-        const rawHtml = window.marked.parse(text);
+        
+        // Normalize text: ensure proper paragraph breaks
+        // Convert sentences that end with period + space + capital letter to have double newlines
+        let processedText = text
+            // First, normalize existing line breaks
+            .replace(/\r\n/g, "\n")
+            // Convert ". [Capital]" patterns to paragraph breaks if they don't already have them
+            .replace(/\.\s+(?=[A-Z])/g, ".\n\n")
+            // Clean up excessive newlines (more than 2 consecutive)
+            .replace(/\n{3,}/g, "\n\n")
+            // Ensure citation markers like [ref_id:X] stay on same line
+            .replace(/\n+(\[ref_[^\]]+\])/g, " $1");
+        
+        const rawHtml = window.marked.parse(processedText);
         return window.DOMPurify.sanitize(rawHtml);
     }
 
@@ -219,13 +233,37 @@ themeToggle?.addEventListener("click", () => {
 });
 
 const openCitation = (citation) => {
+    const citationTextHtml = citation.citationText 
+        ? `<div class="citation-content">
+             <h4>Content</h4>
+             <pre>${escapeHtml(citation.citationText)}</pre>
+           </div>` 
+        : "";
+    
+    const noteHtml = citation.note 
+        ? `<div class="citation-note-section">
+             <h4>Note</h4>
+             <p>${escapeHtml(citation.note)}</p>
+           </div>` 
+        : "";
+    
+    const documentHtml = citation.document 
+        ? `<p><strong>Document:</strong> ${escapeHtml(citation.document)}</p>` 
+        : "";
+    
+    const relevanceHtml = citation.relevanceScore 
+        ? `<p><strong>Relevance Score:</strong> ${citation.relevanceScore.toFixed(3)}</p>` 
+        : "";
+
     modalBody.innerHTML = `
         <h3 id="citation-title">Reference ${citation.id}</h3>
-        <p><strong>Source Type:</strong> ${citation.type}</p>
-        ${citation.title ? `<p><strong>Title:</strong> ${citation.title}</p>` : ""}
-        ${citation.url ? `<p><a href="${citation.url}" target="_blank" rel="noreferrer noopener">Open Source ↗</a></p>` : ""}
-        ${citation.citationText ? `<pre>${citation.citationText}</pre>` : ""}
-        ${citation.note ? `<p>${citation.note}</p>` : ""}
+        <p><strong>Source Type:</strong> ${escapeHtml(citation.type || "unknown")}</p>
+        ${citation.title ? `<p><strong>Title:</strong> ${escapeHtml(citation.title)}</p>` : ""}
+        ${documentHtml}
+        ${citation.url ? `<p><a href="${escapeHtml(citation.url)}" target="_blank" rel="noreferrer noopener">Open Source ↗</a></p>` : ""}
+        ${relevanceHtml}
+        ${citationTextHtml}
+        ${noteHtml}
     `;
     modal.setAttribute("aria-hidden", "false");
 };

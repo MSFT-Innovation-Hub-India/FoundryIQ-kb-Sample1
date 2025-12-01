@@ -14,15 +14,17 @@ Environment Variables Required:
     index_insurance: Name of the insurance FAQ index (optional)
     index_retail: Name of the retail index (optional)
     index_gaming: Name of the gaming index (optional)
+    index_financials: Name of the Nykaa financials index (optional)
 
 Usage:
     python create_knowledge_sources.py
 
 Output:
-    Creates 4 knowledge sources:
+    Creates 5 knowledge sources:
     - Insurance FAQ knowledge source
     - Retail knowledge source
     - Gaming knowledge source
+    - Nykaa financials knowledge source
     - Bing web search knowledge source
 """
 
@@ -46,6 +48,7 @@ search_api_key = os.getenv("search_api_key")
 index_insurance = os.getenv("index_insurance", "contoso-insurance-faq-index")
 index_retail = os.getenv("index_retail", "contoso-retail-index")
 index_gaming = os.getenv("index_gaming", "contoso-gaming-index")
+index_financials = os.getenv("index_financials", "nykaa-financials-indexer")
 
 # Use API key for search authentication
 search_credential = AzureKeyCredential(search_api_key)
@@ -55,7 +58,7 @@ index_client = SearchIndexClient(endpoint=search_url, credential=search_credenti
 
 print(f"Creating knowledge sources in: {search_url}\n")
 
-# Define the three search index knowledge sources to create
+# Define the search index knowledge sources to create
 search_index_sources = [
     {
         "name": index_insurance,
@@ -71,6 +74,11 @@ search_index_sources = [
         "name": index_gaming,
         "index_name": index_gaming,
         "description": "Knowledge source for Contoso Gaming"
+    },
+    {
+        "name": index_financials,
+        "index_name": index_financials,
+        "description": "Knowledge source for Nykaa financial performance data"
     }
 ]
 
@@ -119,4 +127,4 @@ except Exception as e:
 print("\n" + "="*80)
 print("Knowledge sources creation completed!")
 print("="*80)
-print("\nNext step: Run 'python create_kb.py' to create the knowledge base.")
+print("\nNext step: Run 'python ops/create_kb.py' to create the knowledge base.")
