@@ -113,35 +113,10 @@ def _build_request(
     question: str,
     reasoning_choice: Optional[str] = None,
     output_mode_choice: Optional[str] = None,
+    query_mode: str = "per-source",
 ) -> KnowledgeBaseRetrievalRequest:
     settings = _load_settings()
-    source_params = [
-        SearchIndexKnowledgeSourceParams(
-            knowledge_source_name=settings["index_insurance"],
-            include_references=True,
-            include_reference_source_data=True,
-            always_query_source=False,
-        ),
-        SearchIndexKnowledgeSourceParams(
-            knowledge_source_name=settings["index_retail"],
-            include_references=True,
-            include_reference_source_data=True,
-            always_query_source=False,
-        ),
-        SearchIndexKnowledgeSourceParams(
-            knowledge_source_name=settings["index_gaming"],
-            include_references=True,
-            include_reference_source_data=True,
-            always_query_source=False,
-        ),
-        SearchIndexKnowledgeSourceParams(
-            knowledge_source_name=settings["index_financials"],
-            include_references=True,
-            include_reference_source_data=True,
-            always_query_source=False,
-        ),
-    ]
-
+    
     request_kwargs: Dict[str, Any] = {
         "messages": [
             KnowledgeBaseMessage(
@@ -149,9 +124,45 @@ def _build_request(
                 content=[KnowledgeBaseMessageTextContent(text=question.strip())],
             )
         ],
-        "knowledge_source_params": source_params,
         "include_activity": True,
     }
+
+    # Build request based on query mode
+    if query_mode == "per-source":
+        # Original approach: specify per-source parameters with references
+        source_params = [
+            SearchIndexKnowledgeSourceParams(
+                knowledge_source_name=settings["index_insurance"],
+                include_references=True,
+                include_reference_source_data=True,
+                always_query_source=False,
+            ),
+            SearchIndexKnowledgeSourceParams(
+                knowledge_source_name=settings["index_retail"],
+                include_references=True,
+                include_reference_source_data=True,
+                always_query_source=False,
+            ),
+            SearchIndexKnowledgeSourceParams(
+                knowledge_source_name=settings["index_gaming"],
+                include_references=True,
+                include_reference_source_data=True,
+                always_query_source=False,
+            ),
+            SearchIndexKnowledgeSourceParams(
+                knowledge_source_name=settings["index_financials"],
+                include_references=True,
+                include_reference_source_data=True,
+                always_query_source=False,
+            ),
+        ]
+        request_kwargs["knowledge_source_params"] = source_params
+    else:
+        # KB-level approach: override default reasoning effort at request level
+        # No per-source params needed - uses KB defaults
+        # Set request limits for KB-level override
+        request_kwargs["max_runtime_in_seconds"] = 30
+        request_kwargs["max_output_size"] = 6000
 
     if reasoning_choice:
         request_kwargs["retrieval_reasoning_effort"] = _REASONING_FACTORIES[
@@ -339,8 +350,17 @@ def execute_kb_query(
     question: str,
     retrieval_reasoning_effort: Optional[str] = None,
     output_mode: Optional[str] = None,
+    query_mode: str = "per-source",
 ) -> Dict[str, Any]:
-    """Execute a single KB query and return structured data for UI layers."""
+    """Execute a single KB query and return structured data for UI layers.
+    
+    Args:
+        question: The question to ask the knowledge base
+        retrieval_reasoning_effort: Optional reasoning effort level (minimal, low, medium)
+        output_mode: Optional output mode (extractiveData, answerSynthesis)
+        query_mode: Query mode - either "per-source" (specify params per knowledge source)
+                   or "kb-level" (override KB defaults at request level)
+    """
 
     if not question or not question.strip():
         raise ValueError("Question text is required.")
@@ -349,7 +369,7 @@ def execute_kb_query(
     output_mode_choice = _normalize_output_mode(output_mode)
 
     request_timing_start = time.perf_counter()
-    request = _build_request(question, reasoning_choice, output_mode_choice)
+    request = _build_request(question, reasoning_choice, output_mode_choice, query_mode)
     request_prep_time = time.perf_counter() - request_timing_start
 
     retrieval_start = time.perf_counter()
@@ -377,6 +397,7 @@ def execute_kb_query(
         "metadata": {
             "knowledgeBaseName": settings["knowledge_base_name"],
             "searchEndpoint": settings["search_url"],
+            "queryMode": query_mode,
             "requestOverrides": {
                 "retrievalReasoningEffort": reasoning_choice,
                 "knowledgeRetrievalOutputMode": output_mode_choice,

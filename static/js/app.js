@@ -1,6 +1,7 @@
 const form = document.getElementById("question-form");
 const input = document.getElementById("question");
 const askButton = document.getElementById("ask-button");
+const queryModeSelect = document.getElementById("queryMode");
 const reasoningSelect = document.getElementById("retrievalReasoningEffort");
 const outputModeSelect = document.getElementById("knowledgeRetrievalOutputMode");
 const themeToggle = document.getElementById("theme-toggle");
@@ -87,6 +88,11 @@ const REASONING_LABELS = {
 const OUTPUT_MODE_LABELS = {
     extractiveData: "Extractive data (verbatim)",
     answerSynthesis: "Answer synthesis (LLM-written)",
+};
+
+const QUERY_MODE_LABELS = {
+    "per-source": "Per-source parameters (with references)",
+    "kb-level": "KB-level override (reasoning effort only)",
 };
 
 const formatOverrideValue = (value, labels) => {
@@ -196,11 +202,19 @@ const renderConversation = () => {
         card.appendChild(metrics);
 
         const overrides = interaction.metadata?.requestOverrides || {};
+        const queryMode = interaction.metadata?.queryMode || "per-source";
         const settings = document.createElement("div");
         settings.className = "request-settings";
         settings.innerHTML = `
-            <span class="label">Request overrides</span>
+            <span class="label">Request configuration</span>
             <div class="settings-grid">
+                <div>
+                    <span class="setting-name">Query mode</span>
+                    <span class="setting-value">${formatOverrideValue(
+                        queryMode,
+                        QUERY_MODE_LABELS
+                    )}</span>
+                </div>
                 <div>
                     <span class="setting-name">Reasoning</span>
                     <span class="setting-value">${formatOverrideValue(
@@ -301,6 +315,7 @@ form.addEventListener("submit", async (event) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 question,
+                queryMode: queryModeSelect?.value || "per-source",
                 ...(reasoningSelect?.value ? { retrievalReasoningEffort: reasoningSelect.value } : {}),
                 ...(outputModeSelect?.value ? { knowledgeRetrievalOutputMode: outputModeSelect.value } : {}),
             }),

@@ -32,6 +32,11 @@ class QueryPayload(BaseModel):
         alias="knowledgeRetrievalOutputMode",
         description="Optional override for knowledge retrieval output mode",
     )
+    query_mode: str = Field(
+        default="per-source",
+        alias="queryMode",
+        description="Query mode: 'per-source' (specify params per source) or 'kb-level' (override KB defaults)",
+    )
 
     class Config:
         allow_population_by_field_name = True
@@ -56,6 +61,7 @@ async def query_kb(payload: QueryPayload):
             payload.question,
             retrieval_reasoning_effort=payload.retrieval_reasoning_effort,
             output_mode=payload.output_mode,
+            query_mode=payload.query_mode,
         )
         return result
     except KBConfigurationError as exc:  # pragma: no cover - configuration guard

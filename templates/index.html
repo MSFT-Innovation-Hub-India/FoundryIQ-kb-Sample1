@@ -57,6 +57,13 @@
                 </div>
                 <div class="advanced-options" aria-label="Retrieval settings">
                     <div class="form-field">
+                        <label for="queryMode">Query Mode</label>
+                        <select id="queryMode" name="queryMode">
+                            <option value="per-source">Per-source parameters (with references)</option>
+                            <option value="kb-level">KB-level override (reasoning effort only)</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
                         <label for="retrievalReasoningEffort">Retrieval reasoning effort</label>
                         <select id="retrievalReasoningEffort" name="retrievalReasoningEffort">
                             <option value="">Use knowledge base default</option>
@@ -74,7 +81,10 @@
                         </select>
                     </div>
                 </div>
-                <p class="helper-text">These options map directly to the preview REST settings (<code>retrievalReasoningEffort</code> and <code>outputMode</code>) described in the Azure documentation.</p>
+                <p class="helper-text">
+                    <strong>Per-source:</strong> Specifies parameters for each knowledge source individually (<code>knowledgeSourceParams</code>).<br>
+                    <strong>KB-level:</strong> Overrides the default reasoning effort at the request level (<code>retrievalReasoningEffort</code> with <code>maxRuntimeInSeconds</code> and <code>maxOutputSize</code>).
+                </p>
             </form>
 
             <section id="conversation" class="conversation" aria-live="polite">
