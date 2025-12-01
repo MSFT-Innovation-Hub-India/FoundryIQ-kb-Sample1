@@ -158,8 +158,46 @@ def _build_request(
     return KnowledgeBaseRetrievalRequest(**request_kwargs)
 
 
+def _get_web_reference_indices(result: Any) -> set:
+    """Get the set of reference indices that are web sources."""
+    web_indices = set()
+    references = getattr(result, "references", None)
+    if references:
+        for idx, reference in enumerate(references):
+            source_type = getattr(reference, "type", "unknown")
+            if source_type == "web":
+                web_indices.add(idx)
+    return web_indices
+
+
+def _remove_web_citation_markers(text: str, web_indices: set) -> str:
+    """Remove citation markers for web sources from the text."""
+    import re
+    
+    # Pattern to match citation markers like [ref_id:0], [ref_id:1], etc.
+    def replace_citation(match):
+        ref_id = int(match.group(1))
+        # Remove the marker if it's a web reference
+        if ref_id in web_indices:
+            return ""
+        return match.group(0)
+    
+    # Replace citation markers
+    cleaned = re.sub(r'\[ref_id:(\d+)\]', replace_citation, text)
+    
+    # Clean up any double spaces left by removal
+    cleaned = re.sub(r'  +', ' ', cleaned)
+    
+    # Clean up any spaces before punctuation
+    cleaned = re.sub(r' +([.,;:!?])', r'\1', cleaned)
+    
+    return cleaned.strip()
+
+
 def _extract_answer_texts(result: Any) -> List[str]:
     texts: List[str] = []
+    web_indices = _get_web_reference_indices(result)
+    
     if getattr(result, "response", None):
         for response_item in result.response:
             if getattr(response_item, "content", None):
@@ -167,7 +205,9 @@ def _extract_answer_texts(result: Any) -> List[str]:
                 for content_item in response_item.content:
                     text_value = getattr(content_item, "text", None)
                     if text_value:
-                        parts.append(text_value.strip())
+                        # Remove web citation markers from the text
+                        cleaned_text = _remove_web_citation_markers(text_value.strip(), web_indices)
+                        parts.append(cleaned_text)
                 if parts:
                     texts.append("\n\n".join(parts))
     return texts
@@ -227,8 +267,17 @@ def _format_references(result: Any) -> List[Dict[str, Any]]:
     if not references:
         return formatted
 
+    # Build a list of valid (non-web) references
+    valid_references: List[Tuple[int, Any]] = []
     for idx, reference in enumerate(references):
-        formatted.append(_format_reference(idx, reference))
+        source_type = getattr(reference, "type", "unknown")
+        if source_type != "web":
+            valid_references.append((idx, reference))
+    
+    # Format only the valid references with re-indexed IDs
+    for new_idx, (original_idx, reference) in enumerate(valid_references):
+        formatted.append(_format_reference(new_idx, reference))
+    
     return formatted
 
 
