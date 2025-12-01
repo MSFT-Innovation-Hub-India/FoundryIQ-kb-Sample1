@@ -7,6 +7,7 @@ response-shaping logic.
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from functools import lru_cache
@@ -49,6 +50,7 @@ def _load_settings() -> Dict[str, Any]:
         "index_insurance": os.getenv("index_insurance", "contoso-insurance-faq-index"),
         "index_retail": os.getenv("index_retail", "contoso-retail-index"),
         "index_gaming": os.getenv("index_gaming", "contoso-gaming-index"),
+        "index_financials": os.getenv("index_financials", "knowledgesource-1nykaa-financials"),
     }
 
 
@@ -128,6 +130,12 @@ def _build_request(
         ),
         SearchIndexKnowledgeSourceParams(
             knowledge_source_name=settings["index_gaming"],
+            include_references=True,
+            include_reference_source_data=True,
+            always_query_source=False,
+        ),
+        SearchIndexKnowledgeSourceParams(
+            knowledge_source_name=settings["index_financials"],
             include_references=True,
             include_reference_source_data=True,
             always_query_source=False,
@@ -234,6 +242,52 @@ def _format_reference(idx: int, reference: Any) -> Dict[str, Any]:
 
     source_data = getattr(reference, "source_data", None)
     additional_props = getattr(reference, "additional_properties", None)
+    
+    # Debug logging for azureBlob type
+    if source_type == "azureBlob":
+        print(f"\n{'='*80}")
+        print(f"DEBUG: Azure Blob Reference #{idx}")
+        print(f"{'='*80}")
+        print(f"Source Type: {source_type}")
+        print(f"\nReference object attributes:")
+        print(f"  - dir(reference): {[attr for attr in dir(reference) if not attr.startswith('_')]}")
+        
+        # Print actual attribute values
+        print(f"\nAttribute Values:")
+        print(f"  - id: {getattr(reference, 'id', None)}")
+        print(f"  - blob_url: {getattr(reference, 'blob_url', None)}")
+        print(f"  - reranker_score: {getattr(reference, 'reranker_score', None)}")
+        print(f"  - activity_source: {getattr(reference, 'activity_source', None)}")
+        
+        print(f"\nSource Data:")
+        if source_data:
+            print(f"  Type: {type(source_data)}")
+            if isinstance(source_data, dict):
+                print(f"  Content: {json.dumps(source_data, indent=2)}")
+            else:
+                print(f"  Content: {source_data}")
+                print(f"  Attributes: {[attr for attr in dir(source_data) if not attr.startswith('_')]}")
+        else:
+            print(f"  source_data is None")
+        print(f"\nAdditional Properties:")
+        if additional_props:
+            print(f"  Type: {type(additional_props)}")
+            if isinstance(additional_props, dict):
+                print(f"  Content: {json.dumps(additional_props, indent=2)}")
+            else:
+                print(f"  Content: {additional_props}")
+        else:
+            print(f"  additional_properties is None")
+        
+        # Try as_dict() method to see all data
+        print(f"\nFull reference.as_dict():")
+        try:
+            ref_dict = reference.as_dict()
+            print(f"{json.dumps(ref_dict, indent=2)}")
+        except Exception as e:
+            print(f"  Error calling as_dict(): {e}")
+        
+        print(f"{'='*80}\n")
 
     if source_type == "web":
         if isinstance(source_data, dict):
@@ -343,5 +397,6 @@ def get_kb_configuration() -> Dict[str, Any]:
             settings["index_insurance"],
             settings["index_retail"],
             settings["index_gaming"],
+            settings["index_financials"],
         ],
     }
