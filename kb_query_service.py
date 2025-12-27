@@ -46,8 +46,8 @@ def _load_settings() -> Dict[str, Any]:
     return {
         "search_url": search_url,
         "api_key": api_key,
-        "knowledge_base_name": os.getenv("knowledge_base_name", "contoso-multi-index-kb"),
-        "index_insurance": os.getenv("index_insurance", "contoso-insurance-faq-index"),
+        "knowledge_base_name": os.getenv("knowledge_base_name", "kb-phonepe-insurance"),
+        "index_insurance": os.getenv("index_insurance", "ks-phonepe-insurance"),
         "index_retail": os.getenv("index_retail", "contoso-retail-index"),
         "index_gaming": os.getenv("index_gaming", "contoso-gaming-index"),
         "index_financials": os.getenv("index_financials", "knowledgesource-1nykaa-financials"),

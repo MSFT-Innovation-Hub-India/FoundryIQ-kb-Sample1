@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from kb_query_service import KBConfigurationError, execute_kb_query, get_kb_configuration
 
@@ -38,8 +38,7 @@ class QueryPayload(BaseModel):
         description="Query mode: 'per-source' (specify params per source) or 'kb-level' (override KB defaults)",
     )
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 @app.get("/", response_class=HTMLResponse)
