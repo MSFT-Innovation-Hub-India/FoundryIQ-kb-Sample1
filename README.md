@@ -68,6 +68,8 @@ ks-sample1/
 
 ## Architecture Overview
 
+![Solution Architecture](images/architecture.png)
+
 - **FastAPI + Uvicorn backend (`web_app.py`)** exposes both HTML pages and `/api/query` endpoints. Every request ultimately flows through a single `kb_query_service` instance so console and web experiences share throttling, logging, and error handling.
 - **Shared knowledge client (`kb_query_service.py`)** wraps the FoundryIQ KnowledgeBaseRetrievalClient, normalizes timing metrics, and surfaces knobs for `retrieval_reasoning_effort` plus output style so either UI can override defaults without duplicating code.
 - **Frontend (`templates/index.html`, `static/js/app.js`, `static/css/styles.css`)** renders the chat UI, wired theme toggle (light/dark/system) with `localStorage` persistence, exposes dropdowns for retrieval reasoning effort and answer style, and orchestrates citation modals plus performance indicators.
